@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/WindowsSshEnabler.Core/WindowsSshEnabler.Core.csproj" />
+  <Project Path="src/WindowsSshEnabler/WindowsSshEnabler.csproj" />
+  <Project Path="tests/WindowsSshEnabler.Tests/WindowsSshEnabler.Tests.csproj" />
+</Solution>

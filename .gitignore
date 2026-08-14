@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+packaging/work/
+packaging/artifacts/
+*.user
+*.suo
+.vs/
+
