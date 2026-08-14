@@ -141,9 +141,9 @@ function Assert-InnoContract([string]$Path) {
         'ArchitecturesAllowed=x64compatible',
         'ArchitecturesInstallIn64BitMode=x64compatible',
         'PrivilegesRequired=admin',
-        'DefaultDirName={autopf}\\Windows SSH Enabler',
-        'Name: "{group}\\Windows SSH Enabler"',
-        'Name: "{autodesktop}\\Windows SSH Enabler"'
+        'DefaultDirName={autopf}\Windows SSH Enabler',
+        'Name: "{group}\Windows SSH Enabler"',
+        'Name: "{autodesktop}\Windows SSH Enabler"'
     )
     foreach ($item in $required) {
         if (-not $text.Contains($item)) { throw "Installer contract is missing: $item" }
