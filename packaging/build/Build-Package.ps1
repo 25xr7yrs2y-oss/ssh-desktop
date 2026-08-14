@@ -216,7 +216,7 @@ New-Item -ItemType Directory -Path $script:PublishRoot, $script:StageRoot -Force
 
 Write-Step 'Restoring application and tests.'
 foreach ($testProject in $testProjects) {
-    Invoke-Checked $dotnet @('restore', $testProject.FullName, '--locked-mode')
+    Invoke-Checked $dotnet @('restore', $testProject.FullName, '--locked-mode', '--runtime', 'win-x64')
 }
 Invoke-Checked $dotnet @('restore', $appProject, '--locked-mode', '--runtime', 'win-x64')
 

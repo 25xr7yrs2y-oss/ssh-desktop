@@ -71,7 +71,7 @@ jobs:
       - name: Verify committed NuGet lock files
         shell: pwsh
         run: |
-          dotnet restore .\tests\WindowsSshEnabler.Tests\WindowsSshEnabler.Tests.csproj --force-evaluate
+          dotnet restore .\tests\WindowsSshEnabler.Tests\WindowsSshEnabler.Tests.csproj --runtime win-x64 --force-evaluate
           dotnet restore .\src\WindowsSshEnabler\WindowsSshEnabler.csproj --runtime win-x64 --force-evaluate
           git diff -- .\src\WindowsSshEnabler.Core\packages.lock.json .\src\WindowsSshEnabler\packages.lock.json .\tests\WindowsSshEnabler.Tests\packages.lock.json
           git diff --quiet --exit-code -- .\src\WindowsSshEnabler.Core\packages.lock.json .\src\WindowsSshEnabler\packages.lock.json .\tests\WindowsSshEnabler.Tests\packages.lock.json
