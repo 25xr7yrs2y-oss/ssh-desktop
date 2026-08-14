@@ -4,7 +4,7 @@ Windows SSH Enabler is a one-button Windows desktop application that starts an a
 
 ## Download and install
 
-Download `WindowsSshEnabler-Setup-x64.exe` from the [latest release](https://github.com/25xr7yrs2y-oss/ssh-desktop/releases/latest), run the installer, and use the **Windows SSH Enabler** shortcut created on the Desktop or in the Start Menu.
+Download `WindowsSshEnabler-Setup-x64.exe` from the [v1.0.0 release](https://github.com/25xr7yrs2y-oss/ssh-desktop/releases/tag/v1.0.0), run the installer, and use the **Windows SSH Enabler** shortcut created on the Desktop or in the Start Menu.
 
 > **Unsigned release:** Code signing is deferred. Version 1.0.0 is an unsigned prerelease and Windows Defender SmartScreen may warn before installation. Review the source, release notes, and SHA-256 checksum before running it.
 
@@ -54,4 +54,3 @@ The standard uninstaller removes only the application file, installation directo
 The release workflow compiles the application and tests on a GitHub-hosted Windows runner, executes the mocked orchestration tests, verifies the PE GUI subsystem and elevation manifest, builds the installer, records Authenticode state, and publishes SHA-256 checksums. These automated checks do not replace the native service/firewall acceptance matrix on disposable Windows test machines.
 
 See [Agent 1's implementation report](docs/reports/agent1-report.md) and [Agent 2's packaging/security report](docs/reports/agent2-report.md) for architecture, threat analysis, limitations, and the complete test matrices.
-
