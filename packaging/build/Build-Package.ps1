@@ -215,11 +215,10 @@ Reset-ExactDirectory $script:ArtifactRoot
 New-Item -ItemType Directory -Path $script:PublishRoot, $script:StageRoot -Force | Out-Null
 
 Write-Step 'Restoring application and tests.'
-foreach ($project in $projectFiles) {
-    $restoreArguments = @('restore', $project.FullName, '--locked-mode')
-    if ($project.FullName -eq $appProject) { $restoreArguments += @('--runtime', 'win-x64') }
-    Invoke-Checked $dotnet $restoreArguments
+foreach ($testProject in $testProjects) {
+    Invoke-Checked $dotnet @('restore', $testProject.FullName, '--locked-mode')
 }
+Invoke-Checked $dotnet @('restore', $appProject, '--locked-mode', '--runtime', 'win-x64')
 
 Write-Step 'Running all test projects.'
 foreach ($testProject in $testProjects) {

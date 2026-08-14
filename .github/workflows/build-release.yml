@@ -68,6 +68,15 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$') { throw "Invalid package version: $version" }
           "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Verify committed NuGet lock files
+        shell: pwsh
+        run: |
+          dotnet restore .\tests\WindowsSshEnabler.Tests\WindowsSshEnabler.Tests.csproj --force-evaluate
+          dotnet restore .\src\WindowsSshEnabler\WindowsSshEnabler.csproj --runtime win-x64 --force-evaluate
+          git diff -- .\src\WindowsSshEnabler.Core\packages.lock.json .\src\WindowsSshEnabler\packages.lock.json .\tests\WindowsSshEnabler.Tests\packages.lock.json
+          git diff --quiet --exit-code -- .\src\WindowsSshEnabler.Core\packages.lock.json .\src\WindowsSshEnabler\packages.lock.json .\tests\WindowsSshEnabler.Tests\packages.lock.json
+          if ($LASTEXITCODE -ne 0) { throw "Committed NuGet lock files are stale. Commit the generated lock-file changes." }
+
       - name: Build and validate unsigned installer
         shell: pwsh
         run: |
