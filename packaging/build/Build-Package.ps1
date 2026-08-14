@@ -137,6 +137,7 @@ function Assert-ManifestRequiresAdministrator {
 function Assert-InnoContract([string]$Path) {
     $text = Get-Content -LiteralPath $Path -Raw
     $required = @(
+        '#define ProductExe "WindowsSshEnabler.exe"',
         'AppId={{B1D84CE8-E5D1-4B27-89E8-A72F1A0A6365}',
         'ArchitecturesAllowed=x64compatible',
         'ArchitecturesInstallIn64BitMode=x64compatible',
@@ -153,8 +154,8 @@ function Assert-InnoContract([string]$Path) {
             throw "Forbidden active installer section found: $forbidden"
         }
     }
-    $activeFileLines = @($text -split "`r?`n" | Where-Object { $_ -match '^\s*Source:' })
-    if (($activeFileLines.Count -ne 1) -or ($activeFileLines[0] -notmatch 'WindowsSshEnabler\.exe')) {
+    $activeFileLines = @($text -split '\r?\n' | Where-Object { $_ -match '^\s*Source:' })
+    if (($activeFileLines.Count -ne 1) -or ($activeFileLines[0] -notmatch '\{#ProductExe\}')) {
         throw 'The installer must contain exactly one explicitly named application payload.'
     }
 }
