@@ -1,4 +1,7 @@
+using System.Reflection;
+using System.Runtime.InteropServices;
 using WindowsSshEnabler.Core;
+using WindowsSshEnabler.Native;
 
 namespace WindowsSshEnabler.Tests;
 
@@ -18,7 +21,11 @@ internal static class Program
         ("exact rule is reused without duplication", ExactRuleReuse),
         ("duplicate owned rules are rejected", DuplicateRuleRefusal),
         ("firewall failure after service start is partial", FirewallFailureIsPartial),
-        ("late firewall conflict prevents success", LateFirewallConflict)
+        ("late firewall conflict prevents success", LateFirewallConflict),
+        ("DISM capability ABI has exactly three parameters", DismCapabilityAbi),
+        ("DISM package states map to safe application states", DismStateMapping),
+        ("DISM lifecycle is paired across repeated queries", DismLifecycle),
+        ("DISM failure closes its session and prevents mutation", DismFailureIsImmutable)
     ];
 
     private static int Main()
@@ -127,6 +134,88 @@ internal static class Program
         IsTrue(result.PartialSuccess); Contains(result.Message, "appeared during");
     }
 
+    private static void DismCapabilityAbi()
+    {
+        var nativeMethods = typeof(DismCapabilityProbe).GetNestedType("NativeMethods", BindingFlags.NonPublic)
+            ?? throw new Exception("NativeMethods was not found.");
+        var method = nativeMethods.GetMethod("DismGetCapabilityInfo", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new Exception("DismGetCapabilityInfo was not found.");
+        var parameters = method.GetParameters();
+
+        AreEqual(typeof(int), method.ReturnType);
+        AreEqual(3, parameters.Length);
+        AreEqual(typeof(uint), parameters[0].ParameterType);
+        AreEqual(typeof(string), parameters[1].ParameterType);
+        AreEqual(typeof(IntPtr).MakeByRefType(), parameters[2].ParameterType);
+        IsTrue(parameters[2].IsOut, "The capability-info pointer must be an out parameter.");
+
+        var import = method.GetCustomAttribute<DllImportAttribute>()
+            ?? throw new Exception("DismGetCapabilityInfo is missing DllImportAttribute.");
+        AreEqual("DismApi.dll", import.Value);
+        IsTrue(import.ExactSpelling, "The native entry point must use exact spelling.");
+
+        var delete = nativeMethods.GetMethod("DismDelete", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new Exception("DismDelete was not found.");
+        AreEqual(typeof(int), delete.ReturnType);
+
+        AreEqual(IntPtr.Size == 8 ? 40 : 24, Marshal.SizeOf<DismCapabilityProbe.DismCapabilityInfo>());
+        AreEqual((IntPtr)IntPtr.Size, Marshal.OffsetOf<DismCapabilityProbe.DismCapabilityInfo>(nameof(DismCapabilityProbe.DismCapabilityInfo.State)));
+        AreEqual((IntPtr)(IntPtr.Size == 8 ? 16 : 8), Marshal.OffsetOf<DismCapabilityProbe.DismCapabilityInfo>(nameof(DismCapabilityProbe.DismCapabilityInfo.DisplayName)));
+    }
+
+    private static void DismStateMapping()
+    {
+        AreEqual(CapabilityState.NotInstalled, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.NotPresent));
+        AreEqual(CapabilityState.Pending, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.UninstallPending));
+        AreEqual(CapabilityState.NotInstalled, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.Staged));
+        AreEqual(CapabilityState.NotInstalled, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.Removed));
+        AreEqual(CapabilityState.Installed, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.Installed));
+        AreEqual(CapabilityState.Pending, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.InstallPending));
+        AreEqual(CapabilityState.NotInstalled, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.Superseded));
+        AreEqual(CapabilityState.Pending, DismCapabilityProbe.MapNativeState(DismCapabilityProbe.DismPackageFeatureState.PartiallyInstalled));
+        AreEqual(CapabilityState.Unknown, DismCapabilityProbe.MapNativeState((DismCapabilityProbe.DismPackageFeatureState)999));
+    }
+
+    private static void DismLifecycle()
+    {
+        var api = new FakeDismApi { State = DismCapabilityProbe.DismPackageFeatureState.Installed };
+        using (var probe = new DismCapabilityProbe(api))
+        {
+            AreEqual(CapabilityState.Installed, probe.GetOpenSshServerStateCore());
+            AreEqual(CapabilityState.Installed, probe.GetOpenSshServerStateCore());
+            AreEqual(1, api.InitializeCalls);
+            AreEqual(2, api.OpenCalls);
+            AreEqual(2, api.QueryCalls);
+            AreEqual(2, api.DeleteCalls);
+            AreEqual(2, api.CloseCalls);
+            AreEqual(0, api.ShutdownCalls);
+        }
+        AreEqual(1, api.ShutdownCalls);
+        AreEqual("initialize,open,query,delete,close,open,query,delete,close,shutdown", string.Join(',', api.Events));
+    }
+
+    private static void DismFailureIsImmutable()
+    {
+        var api = new FakeDismApi { QueryResult = unchecked((int)0x80070057) };
+        using var probe = new DismCapabilityProbe(api);
+        try
+        {
+            probe.GetOpenSshServerStateCore();
+            throw new Exception("Expected the failing HRESULT to throw.");
+        }
+        catch (ArgumentException) { }
+
+        AreEqual(1, api.CloseCalls);
+        AreEqual(0, api.DeleteCalls);
+
+        var fixture = Fixture.Good();
+        fixture.Capability.Exception = new ArgumentException("Value does not fall within the expected range.");
+        var result = fixture.Run();
+        IsFalse(result.Success);
+        AreEqual(0, fixture.Service.ConfigureCalls);
+        AreEqual(0, fixture.Firewall.EnsureCalls);
+    }
+
     private static void IsTrue(bool value, string? message = null) { if (!value) throw new Exception(message ?? "Expected true."); }
     private static void IsFalse(bool value) { if (value) throw new Exception("Expected false."); }
     private static void AreEqual<T>(T expected, T actual) where T : notnull { if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"Expected {expected}; got {actual}."); }
@@ -165,7 +254,12 @@ internal sealed class FakePlatform : IPlatformProbe
 internal sealed class FakeCapability : ICapabilityProbe
 {
     public CapabilityState State { get; set; } = CapabilityState.Installed;
-    public CapabilityState GetOpenSshServerState() => State;
+    public Exception? Exception { get; set; }
+    public CapabilityState GetOpenSshServerState()
+    {
+        if (Exception is not null) throw Exception;
+        return State;
+    }
 }
 
 internal sealed class FakeService : IServiceManager
@@ -227,4 +321,79 @@ internal sealed class FakeClock : IClock
 internal sealed class FakeStatus : IStatusSink
 {
     public void Report(string message) { }
+}
+
+internal sealed class FakeDismApi : DismCapabilityProbe.IDismApi
+{
+    private readonly List<IntPtr> allocations = [];
+
+    public DismCapabilityProbe.DismPackageFeatureState State { get; set; }
+    public int InitializeResult { get; set; }
+    public int OpenResult { get; set; }
+    public int QueryResult { get; set; }
+    public int DeleteResult { get; set; }
+    public int CloseResult { get; set; }
+    public int ShutdownResult { get; set; }
+    public int InitializeCalls { get; private set; }
+    public int OpenCalls { get; private set; }
+    public int QueryCalls { get; private set; }
+    public int DeleteCalls { get; private set; }
+    public int CloseCalls { get; private set; }
+    public int ShutdownCalls { get; private set; }
+    public List<string> Events { get; } = [];
+
+    public int Initialize(DismCapabilityProbe.DismLogLevel logLevel, string? logFilePath, string? scratchDirectory)
+    {
+        InitializeCalls++;
+        Events.Add("initialize");
+        return InitializeResult;
+    }
+
+    public int OpenSession(string imagePath, string? windowsDirectory, string? systemDrive, out uint session)
+    {
+        OpenCalls++;
+        Events.Add("open");
+        session = OpenResult < 0 ? 0u : 123u;
+        return OpenResult;
+    }
+
+    public int GetCapabilityInfo(uint session, string name, out IntPtr capabilityInfo)
+    {
+        QueryCalls++;
+        Events.Add("query");
+        if (QueryResult < 0)
+        {
+            capabilityInfo = IntPtr.Zero;
+            return QueryResult;
+        }
+
+        capabilityInfo = Marshal.AllocHGlobal(Marshal.SizeOf<DismCapabilityProbe.DismCapabilityInfo>());
+        allocations.Add(capabilityInfo);
+        Marshal.StructureToPtr(new DismCapabilityProbe.DismCapabilityInfo { State = State }, capabilityInfo, false);
+        return QueryResult;
+    }
+
+    public int Delete(IntPtr dismStructure)
+    {
+        DeleteCalls++;
+        Events.Add("delete");
+        if (allocations.Remove(dismStructure)) Marshal.FreeHGlobal(dismStructure);
+        return DeleteResult;
+    }
+
+    public int CloseSession(uint session)
+    {
+        CloseCalls++;
+        Events.Add("close");
+        return CloseResult;
+    }
+
+    public int Shutdown()
+    {
+        ShutdownCalls++;
+        Events.Add("shutdown");
+        foreach (var allocation in allocations) Marshal.FreeHGlobal(allocation);
+        allocations.Clear();
+        return ShutdownResult;
+    }
 }

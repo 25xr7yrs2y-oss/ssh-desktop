@@ -5,4 +5,7 @@ packaging/artifacts/
 *.user
 *.suo
 .vs/
-
+._*
+__MACOSX/
+handoff/
+docs/reports/evidence/

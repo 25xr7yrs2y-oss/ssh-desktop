@@ -50,7 +50,7 @@ An unrecognized test-project shape fails instead of being treated as a pass.
 
 Successful unsigned builds produce:
 
-- `artifacts/WindowsSshEnabler-Setup-x64.exe`;
+- `artifacts/WindowsSshEnabler-Setup-<version>-x64.exe`;
 - `artifacts/artifact-inventory.json`;
 - `artifacts/SHA256SUMS.txt`.
 

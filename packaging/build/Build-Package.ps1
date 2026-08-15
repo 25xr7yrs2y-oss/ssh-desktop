@@ -143,6 +143,7 @@ function Assert-InnoContract([string]$Path) {
         'ArchitecturesInstallIn64BitMode=x64compatible',
         'PrivilegesRequired=admin',
         'DefaultDirName={autopf}\Windows SSH Enabler',
+        'OutputBaseFilename=WindowsSshEnabler-Setup-{#AppVersion}-x64',
         'Name: "{group}\Windows SSH Enabler"',
         'Name: "{autodesktop}\Windows SSH Enabler"'
     )
@@ -293,7 +294,8 @@ if ($AppIconPath) { $isccArguments += "/DAppIconFile=$AppIconPath" }
 $isccArguments += $script:InstallerScript
 Invoke-Checked $iscc $isccArguments
 
-$setupPath = Join-Path $script:ArtifactRoot 'WindowsSshEnabler-Setup-x64.exe'
+$setupFileName = "WindowsSshEnabler-Setup-$Version-x64.exe"
+$setupPath = Join-Path $script:ArtifactRoot $setupFileName
 if (-not (Test-Path -LiteralPath $setupPath -PathType Leaf)) {
     throw "Inno Setup returned without the expected installer: $setupPath"
 }
@@ -312,7 +314,7 @@ $inventory = @(
         authenticode = $appSignatureState
     },
     [ordered]@{
-        path = 'artifacts/WindowsSshEnabler-Setup-x64.exe'
+        path = "artifacts/$setupFileName"
         bytes = (Get-Item -LiteralPath $setupPath).Length
         sha256 = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
         authenticode = $setupSignatureState

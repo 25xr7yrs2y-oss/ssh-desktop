@@ -3,8 +3,10 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/WindowsSshEnabler.Core/WindowsSshEnabler.Core.csproj" />
+    <Compile Include="../../src/WindowsSshEnabler/Native/DismCapabilityProbe.cs" Link="Native/DismCapabilityProbe.cs" />
   </ItemGroup>
 </Project>

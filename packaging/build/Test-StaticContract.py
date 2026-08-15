@@ -48,6 +48,7 @@ def main() -> int:
         "ArchitecturesAllowed=x64compatible",
         "ArchitecturesInstallIn64BitMode=x64compatible",
         "PrivilegesRequired=admin",
+        "OutputBaseFilename=WindowsSshEnabler-Setup-{#AppVersion}-x64",
         'Name: "{group}\\Windows SSH Enabler"',
         'Name: "{autodesktop}\\Windows SSH Enabler"',
         'Source: "{#AppStageDir}\\{#ProductExe}"',

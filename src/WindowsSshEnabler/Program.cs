@@ -15,9 +15,10 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += (_, args) => ShowFatal(args.ExceptionObject as Exception);
 
         var clock = new SystemClock();
+        using var capabilityProbe = new DismCapabilityProbe();
         var controller = new EnablerController(
             new WindowsPlatformProbe(),
-            new DismCapabilityProbe(),
+            capabilityProbe,
             new NativeServiceManager(clock),
             new NetworkListManagerProbe(),
             new IpHelperPortInspector(),

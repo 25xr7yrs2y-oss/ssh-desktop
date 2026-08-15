@@ -7,7 +7,7 @@ app_root="$validation_root/src/WindowsSshEnabler"
 test -f "$validation_root/WindowsSshEnabler.slnx"
 test -f "$app_root/app.manifest"
 test -f "$app_root/Properties/PublishProfiles/win-x64.pubxml"
-test "$(find "$validation_root" -name packages.lock.json -type f | wc -l | tr -d ' ')" = "3"
+test "$(find "$validation_root" -name packages.lock.json -type f | wc -l | tr -d ' ')" = "4"
 grep -q 'OutputType>WinExe<' "$app_root/WindowsSshEnabler.csproj"
 grep -q 'TargetFramework>net10.0-windows<' "$app_root/WindowsSshEnabler.csproj"
 grep -q 'requireAdministrator' "$app_root/app.manifest"
@@ -19,6 +19,7 @@ grep -q 'RemoteAddresses = "LocalSubnet"' "$app_root/Native/WindowsFirewallManag
 grep -q 'Profiles = ProfileDomainAndPrivate' "$app_root/Native/WindowsFirewallManager.cs"
 grep -q 'ServiceName = "sshd"' "$app_root/Native/WindowsFirewallManager.cs"
 grep -q 'DismGetCapabilityInfo' "$app_root/Native/DismCapabilityProbe.cs"
+test "$(grep -c 'extern int DismGetCapabilityInfo(uint session, string name, out IntPtr capabilityInfo)' "$app_root/Native/DismCapabilityProbe.cs")" = "1"
 grep -q 'AfInet6' "$app_root/Native/IpHelperPortInspector.cs"
 
 button_count=$(grep -R 'new Button' "$app_root/UI" | wc -l | tr -d ' ')
@@ -39,6 +40,7 @@ if command -v xmllint >/dev/null 2>&1; then
     "$validation_root/Directory.Build.props" \
     "$validation_root/src/WindowsSshEnabler.Core/WindowsSshEnabler.Core.csproj" \
     "$app_root/WindowsSshEnabler.csproj" \
+    "$validation_root/tools/WindowsSshEnabler.DismProbe/WindowsSshEnabler.DismProbe.csproj" \
     "$app_root/app.manifest" \
     "$app_root/Properties/PublishProfiles/win-x64.pubxml"
 fi
